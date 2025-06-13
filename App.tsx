@@ -17,12 +17,14 @@ import { SendModal } from './src/components/SendModal';
 import { ReceiveModal } from './src/components/ReceiveModal';
 import { HistoryScreen } from './src/screens/HistoryScreen';
 import { TransactionList } from './src/components/TransactionList';
+import QRScannerScreen from './src/screens/QRScannerScreen';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('home');
   const [showBalance, setShowBalance] = useState<boolean>(true);
   const [sendModalVisible, setSendModalVisible] = useState<boolean>(false);
   const [receiveModalVisible, setReceiveModalVisible] = useState<boolean>(false);
+  const [qrScannerVisible, setQrScannerVisible] = useState<boolean>(false);
   const [currentDate, setCurrentDate] = useState<string>('');
   
   const transactions = [
@@ -88,11 +90,17 @@ const App: React.FC = () => {
     setSendModalVisible(false);
   };
 
+  const handleQRScan = (data: string) => {
+    setQrScannerVisible(false);
+    // Handle the scanned QR code data here
+    console.log('Scanned QR code:', data);
+  };
+
   const renderHomeTab = () => (
     <View style={styles.container}>
       <Header 
         currentDate={currentDate} 
-        onScanPress={() => null}
+        onScanPress={() => setQrScannerVisible(true)}
       />
       <BalanceCard
         showBalance={showBalance}
@@ -132,6 +140,11 @@ const App: React.FC = () => {
       <ReceiveModal
         visible={receiveModalVisible}
         onClose={() => setReceiveModalVisible(false)}
+      />
+      <QRScannerScreen
+        visible={qrScannerVisible}
+        onClose={() => setQrScannerVisible(false)}
+        onScan={handleQRScan}
       />
     </SafeAreaView>
   );
