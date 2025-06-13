@@ -14,6 +14,13 @@
     "assetBundlePatterns": [
       "**/*"
     ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.normiewalletmobile",
+      "infoPlist": {
+        "NSCameraUsageDescription": "We need access to your camera to scan QR codes"
+      }
+    },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
@@ -29,7 +36,13 @@
     },
     "scheme": "normiewallet",
     "plugins": [
-      "expo-dev-client"
+      "expo-dev-client",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera to scan QR codes."
+        }
+      ]
     ],
     "extra": {
       "eas": {

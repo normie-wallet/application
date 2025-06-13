@@ -12,6 +12,8 @@ interface QuickActionsProps {
 export const QuickActions: React.FC<QuickActionsProps> = ({
   onSend,
   onReceive,
+  onSwap,
+  onBuy,
 }) => {
   return (
     <View style={styles.container}>

@@ -14,6 +14,7 @@ import {
   BackHandler,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import QRCode from 'react-native-qrcode-svg';
 
 interface ReceiveModalProps {
   visible: boolean;
@@ -133,6 +134,16 @@ export const ReceiveModal: React.FC<ReceiveModalProps> = ({
                 </TouchableOpacity>
               </View>
 
+              <View style={styles.qrContainer}>
+                <View style={styles.qrCode}>
+                  <QRCode
+                    value={walletAddress}
+                    size={200}
+                    color="#7c3aed"
+                    backgroundColor="white"
+                  />
+                </View>
+              </View>
 
               <View style={styles.addressContainer}>
                 <Text style={styles.addressText}>
@@ -191,6 +202,21 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: 'bold',
+  },
+  qrContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  qrCode: {
+    padding: 16,
+    backgroundColor: 'white',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    width: 232,
+    height: 232,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   addressContainer: {
     flexDirection: 'row',

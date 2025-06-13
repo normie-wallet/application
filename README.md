@@ -7,6 +7,8 @@ A React Native mobile wallet application built with Expo.
 - View wallet balance
 - Send and receive money
 - Transaction history
+- QR code scanning
+- Shake to action added
 
 ## Prerequisites
 

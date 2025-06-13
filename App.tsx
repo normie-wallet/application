@@ -18,6 +18,7 @@ import { ReceiveModal } from './src/components/ReceiveModal';
 import { HistoryScreen } from './src/screens/HistoryScreen';
 import { TransactionList } from './src/components/TransactionList';
 import QRScannerScreen from './src/screens/QRScannerScreen';
+import { ShakeToAction } from './src/utils/shakeToAction';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('home');
@@ -27,6 +28,8 @@ const App: React.FC = () => {
   const [qrScannerVisible, setQrScannerVisible] = useState<boolean>(false);
   const [currentDate, setCurrentDate] = useState<string>('');
   
+  const shakeDetector = useRef<ShakeToAction | null>(null);
+
   const transactions = [
     {
       id: 1,
@@ -74,6 +77,28 @@ const App: React.FC = () => {
       sender: 'DesignStudio',
     },
   ];
+
+  /**
+   * Device shake detection
+   */
+  useEffect(() => {
+    shakeDetector.current = new ShakeToAction(() => {
+      console.log('shake');
+    }, {
+      threshold: 2.0,
+      windowSize: 400,
+      minShakes: 2, 
+      cooldownTime: 1000, 
+    });
+    
+    shakeDetector.current.start();
+
+    return () => {
+      if (shakeDetector.current) {
+        shakeDetector.current.stop();
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const date = new Date();
