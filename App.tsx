@@ -141,7 +141,9 @@ const App: React.FC = () => {
           <Text style={styles.seeAllText}>See All</Text>
         </TouchableOpacity>
       </View>
-      <TransactionList transactions={transactions} />
+      <TransactionList 
+        transactions={transactions} 
+      />
     </View>
   );
 

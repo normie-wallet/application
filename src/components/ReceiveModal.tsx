@@ -12,6 +12,7 @@ import {
   Platform,
   Easing,
   BackHandler,
+  TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
@@ -26,8 +27,12 @@ export const ReceiveModal: React.FC<ReceiveModalProps> = ({
   onClose,
 }) => {
   const [isVisible, setIsVisible] = useState(false);
+  const [inputAmount, setInputAmount] = useState('');
+  const [submittedAmount, setSubmittedAmount] = useState(0);
+  const [showQR, setShowQR] = useState(false);
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
   const slideAnim = React.useRef(new Animated.Value(Dimensions.get('window').height)).current;
+  const qrFadeAnim = React.useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -81,12 +86,26 @@ export const ReceiveModal: React.FC<ReceiveModalProps> = ({
     }
   }, [visible]);
 
-  const handleClose = () => {
-    Keyboard.dismiss();
-    onClose();
+  const handleSubmit = () => {
+    if (!inputAmount) return;
+    
+    setSubmittedAmount(parseFloat(inputAmount));
+    setShowQR(true);
+    Animated.timing(qrFadeAnim, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
   };
 
-  const walletAddress = '0x742d35Cc6634C0532925a3b844Bc454e4438f44e';
+  const handleClose = () => {
+    Keyboard.dismiss();
+    setShowQR(false);
+    qrFadeAnim.setValue(0);
+    setInputAmount('');
+    setSubmittedAmount(0);
+    onClose();
+  };
 
   if (!isVisible && !visible) {
     return null;
@@ -119,7 +138,7 @@ export const ReceiveModal: React.FC<ReceiveModalProps> = ({
             activeOpacity={1}
             onPress={handleClose}
           >
-            <Animated.View
+            {!showQR && <Animated.View
               style={[
                 styles.modalContent,
                 {
@@ -128,43 +147,101 @@ export const ReceiveModal: React.FC<ReceiveModalProps> = ({
               ]}
             >
               <View style={styles.header}>
-                <Text style={styles.title}>Receive Money</Text>
+                <Text style={styles.title}>{!submittedAmount && `Receive Money`}</Text>
                 <TouchableOpacity onPress={handleClose}>
                   <Ionicons name="close" size={24} color="#666" />
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.qrContainer}>
-                <View style={styles.qrCode}>
-                  <QRCode
-                    value={walletAddress}
-                    size={200}
-                    color="#7c3aed"
-                    backgroundColor="white"
-                  />
+              <View>
+                  <Text style={styles.label}>Enter payment amount (USD):</Text>
+                  <View style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    margin: 'auto'
+                  }}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder='0'
+                      keyboardType="decimal-pad"
+                      value={inputAmount}
+                      onChangeText={(text) => {
+                        // Remove any non-numeric characters except decimal point
+                        const cleaned = text.replace(/[^0-9.]/g, '');
+                        
+                        // Ensure only one decimal point
+                        const parts = cleaned.split('.');
+                        if (parts.length > 2) {
+                          return;
+                        }
+                        
+                        // Limit to 2 decimal places
+                        if (parts[1] && parts[1].length > 2) {
+                          return;
+                        }
+                        
+                        setInputAmount(cleaned);
+                      }}
+                    />
+                    <Text style={{
+                      fontSize: 30,
+                      color: '#7c3aed'
+                    }}>$</Text>
+                  </View>
+
+                  <TouchableOpacity
+                    style={{
+                      ...styles.sendButton,
+                      marginTop: 20
+                    }}
+                    onPress={handleSubmit}
+                  >
+                    <Text style={styles.sendButtonText}>Send</Text>
+                  </TouchableOpacity>
                 </View>
-              </View>
+            </Animated.View> }
 
-              <View style={styles.addressContainer}>
-                <Text style={styles.addressText}>
-                  {walletAddress}
-                </Text>
-                <TouchableOpacity style={styles.copyButton}>
-                  <Ionicons name="copy-outline" size={20} color="#7c3aed" />
-                </TouchableOpacity>
-              </View>
+              {showQR && (
+                <Animated.View
+                  style={[
+                    styles.qrContainer,
+                    styles.modalContent,
+                    {
+                      opacity: qrFadeAnim,
+                      transform: [{
+                        scale: qrFadeAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0.8, 1]
+                        })
+                      }]
+                    }
+                  ]}
+                >
+                  <View style={{
+                    ...styles.header,
+                    position: 'absolute',
+                    right: 20,
+                    top: 20
+                  }}>
+                    <Text style={styles.title}>{!submittedAmount && `Receive Money`}</Text>
+                    <TouchableOpacity onPress={handleClose}>
+                      <Ionicons name="close" size={24} color="#666" />
+                    </TouchableOpacity>
+                  </View>
 
-              <View style={styles.actions}>
-                <TouchableOpacity style={styles.actionButton}>
-                  <Ionicons name="share-social-outline" size={20} color="#7c3aed" />
-                  <Text style={styles.actionText}>Share Address</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.actionButton}>
-                  <Ionicons name="add-circle-outline" size={20} color="#7c3aed" />
-                  <Text style={styles.actionText}>Request Amount</Text>
-                </TouchableOpacity>
-              </View>
-            </Animated.View>
+                  <Text style={{
+                    ...styles.receiveAmount,
+                  }}>Receive <Text style={{
+                    color: '#7c3aed',
+                    fontWeight: 500
+                  }}>{submittedAmount}$</Text></Text>
+                  <QRCode
+                    value={`ethereum:0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913@8453/transfer?address=0x5DFE0A60d3c27976eb3F1530F8a1CfA4bE2BAD30&uint256=${submittedAmount * 1000000}`}
+                    size={200}
+                  />
+                </Animated.View>
+              )}
           </TouchableOpacity>
         </Animated.View>
       </KeyboardAvoidingView>
@@ -190,7 +267,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
-    minHeight: 400,
+    minHeight: 250,
     paddingBottom: Platform.OS === 'ios' ? 40 : 20,
   },
   header: {
@@ -205,7 +282,13 @@ const styles = StyleSheet.create({
   },
   qrContainer: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginTop: 20,
+    padding: 20,
+  },
+  receiveAmount: {
+    fontSize: 40,
+    marginBottom: 40,
+    marginTop: 0
   },
   qrCode: {
     padding: 16,
@@ -238,6 +321,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
   },
+  label: {
+    fontSize: 16,
+    marginBottom: 8,
+    color: '#666',
+  },
   actionButton: {
     flex: 1,
     flexDirection: 'row',
@@ -252,5 +340,30 @@ const styles = StyleSheet.create({
     color: '#7c3aed',
     marginLeft: 8,
     fontSize: 14,
+  },
+  input: {
+    borderColor: '#ddd',
+    fontSize: 35,
+    textAlign: 'center',
+  },
+  sendButton: {
+    backgroundColor: '#7c3aed',
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  sendButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  amountDisplay: {
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  amountText: {
+    fontSize: 35,
+    color: '#7c3aed',
+    fontWeight: 'bold',
   },
 }); 
