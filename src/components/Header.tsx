@@ -20,6 +20,9 @@ export const Header: React.FC<HeaderProps> = ({ currentDate, onScanPress }) => {
         </View>
       </View>
       <View style={styles.headerRight}>
+        <TouchableOpacity style={styles.iconButton} onPress={onScanPress}>
+          <Ionicons name="qr-code" size={24} color="#7c3aed" />
+        </TouchableOpacity>
         <TouchableOpacity style={styles.iconButton}>
           <Ionicons name="notifications" size={24} color="#666" />
           <View style={styles.badge}>
