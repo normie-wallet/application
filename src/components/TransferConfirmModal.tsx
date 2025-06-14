@@ -112,12 +112,6 @@ export const TransferConfirmModal: React.FC<TransferConfirmModalProps> = ({
                     {data.address}
                   </Text>
                 </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Network</Text>
-                  <Text style={styles.detailValue}>
-                    {data.chainId === 1 ? 'Ethereum' : data.chainId === 8453 ? 'Base' : `Chain ID: ${data.chainId}`}
-                  </Text>
-                </View>
               </View>
 
               {isValidating && (
