@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 interface HeaderProps {
   currentDate: string;
   user: object,
+  loadingWallet: object,
   onScanPress: () => void;
   onSettingsPress: () => void;
 }
@@ -12,6 +13,7 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ 
   currentDate, 
   user,
+  loadingWallet,
   onScanPress, 
   onSettingsPress 
 }) => {
@@ -23,13 +25,13 @@ export const Header: React.FC<HeaderProps> = ({
         </View>
         <View style={styles.headerText}>
           <Text style={styles.dateText}>{currentDate}</Text>
-          <Text style={styles.greetingText} numberOfLines={1} ellipsizeMode="tail">{user.address}</Text>
+          <Text style={styles.greetingText} numberOfLines={1} ellipsizeMode="tail">{user?.address}</Text>
         </View>
       </View>
       <View style={styles.headerRight}>
-        <TouchableOpacity style={styles.iconButton} onPress={onScanPress}>
+        {loadingWallet && <TouchableOpacity style={styles.iconButton} onPress={onScanPress}>
           <Ionicons name="qr-code" size={24} color="#7c3aed" />
-        </TouchableOpacity>
+        </TouchableOpacity>}
         <TouchableOpacity style={styles.iconButton}>
           <Ionicons name="notifications" size={24} color="#666" />
           <View style={styles.badge}>
