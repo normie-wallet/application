@@ -33,6 +33,7 @@ export const ReceiveModal: React.FC<ReceiveModalProps> = ({
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
   const slideAnim = React.useRef(new Animated.Value(Dimensions.get('window').height)).current;
   const qrFadeAnim = React.useRef(new Animated.Value(0)).current;
+  const inputRef = React.useRef<TextInput>(null);
 
   useEffect(() => {
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -65,7 +66,11 @@ export const ReceiveModal: React.FC<ReceiveModalProps> = ({
           useNativeDriver: Platform.OS === 'ios',
           easing: Easing.out(Easing.cubic),
         }),
-      ]).start();
+      ]).start(() => {
+        setTimeout(() => {
+          inputRef.current?.focus();
+        }, 100);
+      });
     } else {
       Animated.parallel([
         Animated.timing(slideAnim, {
@@ -162,6 +167,7 @@ export const ReceiveModal: React.FC<ReceiveModalProps> = ({
                     margin: 'auto'
                   }}>
                     <TextInput
+                      ref={inputRef}
                       style={styles.input}
                       placeholder='0'
                       keyboardType="decimal-pad"

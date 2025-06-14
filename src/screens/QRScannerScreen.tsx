@@ -52,15 +52,6 @@ const QRScannerScreen: React.FC<QRScannerScreenProps> = ({
     // Process the scan with a small delay to ensure we don't process multiple scans
     setTimeout(() => {
       onScan(data);
-      Alert.alert('QR Code Scanned', data, [
-        {
-          text: 'OK',
-          onPress: () => {
-            isProcessingRef.current = false;
-            onClose();
-          }
-        }
-      ]);
     }, 100);
   };
 
