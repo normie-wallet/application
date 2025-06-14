@@ -23,8 +23,6 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
   walletData,
   onToggleBalance,
 }) => {
-  console.log(walletData);
-
   return (
     <LinearGradient
       colors={['#7c3aed', '#db2777']}

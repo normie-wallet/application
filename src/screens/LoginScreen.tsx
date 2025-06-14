@@ -17,7 +17,8 @@ export const LoginScreen: React.FC = () => {
   const handleLogin = async () => {
     try {
       setIsLoading(true);
-      await login({ loginMethods: ["email"] });
+      const user = await login({ loginMethods: ["email"] });
+      
     } catch (error) {
     //   console.error("Login error:", error);
     } finally {

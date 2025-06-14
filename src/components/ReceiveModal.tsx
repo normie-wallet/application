@@ -118,6 +118,9 @@ export const ReceiveModal: React.FC<ReceiveModalProps> = ({
     return null;
   }
 
+  console.log( `Wallet Data 333:` );
+  console.log( submittedAmount );
+
   return (
     <Modal
       visible={isVisible}
@@ -245,7 +248,7 @@ export const ReceiveModal: React.FC<ReceiveModalProps> = ({
                     fontWeight: 500
                   }}>{submittedAmount}$</Text></Text>
                   <QRCode
-                    value={`${walletData.chain_type}:${walletData.address}@${walletData.chain_id.split(':')[1]}/transfer?uint256=${submittedAmount * 1000000}&wallet_id=${walletData.id}&wallet_client=${walletData.wallet_client}`}
+                    value={`${walletData.chain_type}:0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238@11155111/transfer?address=${walletData.address}&uint256=${submittedAmount * 1000000}`}
                     size={200}
                   />
                 </Animated.View>

@@ -21,6 +21,7 @@ import { ShakeToAction } from '../utils/shakeToAction';
 import { TransferConfirmModal } from './TransferConfirmModal';
 import { useLogin } from "@privy-io/expo/ui";
 import { ProfileSettings } from '../screens/ProfileSettings';
+import { PrivyUser, useEmbeddedEthereumWallet, usePrivy } from '@privy-io/expo';
 import { usePrivy, useEmbeddedEthereumWallet } from '@privy-io/expo';
 import {
   createPublicClient,
@@ -55,12 +56,69 @@ export const AppContent: React.FC = () => {
   const [isValidating, setIsValidating] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const {user} = usePrivy();
-  const { login } = useLogin();
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [accountData, setAccountData] = useState<any>(user);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [showProfileSettings, setShowProfileSettings] = useState(false);
+  const { create } = useEmbeddedEthereumWallet();
+
+  console.log('Account Data:', accountData);
   
   const shakeDetector = useRef<ShakeToAction | null>(null);
-  const userData = user?.linked_accounts[0];
+  const [userData, setUserData] = useState<any>(accountData?.linked_accounts?.[0]);
+  const [walletData, setWalletData] = useState<object | undefined>(user?.linked_accounts[1]);
+
+  // Update userData and walletData when accountData changes
+  useEffect(() => {
+    if (accountData) {
+      console.log('Updating states with new account data:', accountData);
+      setUserData(accountData.linked_accounts?.[0]);
+      setWalletData(accountData.linked_accounts?.[1]);
+      setIsLoading(false);
+    }
+  }, [accountData]);
+
+  useEffect(() => {
+    const createWallet = async () => {
+      try {
+        setIsLoading(true);
+        const createData = await create();
+        console.log('Create data:', createData);
+        
+        // Extract data from user object
+        const userData = createData.user;
+        console.log('User data:', userData);
+        
+        // Update states with correct data structure
+        setAccountData(userData);
+        setUserData(userData.linked_accounts?.[0]);
+        setWalletData(userData.linked_accounts?.[1]);
+        console.log('Wallet data after creation:', userData.linked_accounts?.[1]);
+      } catch (error) {
+        // If wallet already exists, use existing user data
+        console.log('Using existing user data:', user);
+        setAccountData(user);
+        setUserData(user?.linked_accounts?.[0]);
+        setWalletData(user?.linked_accounts?.[1]);
+        console.log('Wallet data from user:', user?.linked_accounts?.[1]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (!accountData?.linked_accounts?.[1]) {
+      console.log('No wallet found, creating new one...');
+      createWallet();
+    } else {
+      console.log('Using existing wallet data:', accountData.linked_accounts[1]);
+      setWalletData(accountData.linked_accounts[1]);
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Log wallet data changes
+  useEffect(() => {
+    console.log('Wallet data updated:', walletData);
+  }, [walletData]);
 
   const USDC = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
   const USDT = "0x7169D38820dfd117C3FA1f22a697dBA58d90BA06";
@@ -151,7 +209,7 @@ export const AppContent: React.FC = () => {
     };
     setCurrentDate(date.toLocaleDateString('en-US', options));
   }, []);
-
+  
   const handleSend = (amount: string, recipient: string) => {
     setSendModalVisible(false);
   };
@@ -353,32 +411,59 @@ export const AppContent: React.FC = () => {
     }
   };
 
+  const formatDate = (date: Date) => {
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    const month = months[date.getMonth()];
+    const day = date.getDate();
+    const year = date.getFullYear();
+    return `${month} ${day}, ${year}`;
+  };
+
   const renderHomeTab = () => (
     <View style={styles.container}>
-      <Header 
-        currentDate={currentDate}
-        onScanPress={() => setQrScannerVisible(true)}
+      <Header
         onSettingsPress={() => setShowProfileSettings(true)}
         user={userData}
+        onScanPress={() => setQrScannerVisible(true)}
+        loadingWallet={!isLoading && walletData}
+        currentDate={formatDate(new Date())}
       />
-      <BalanceCard
-        showBalance={showBalance}
-        onToggleBalance={() => setShowBalance(!showBalance)}
-        walletData={user?.linked_accounts[1]}
-      />
-      <QuickActions
-        onSend={() => setSendModalVisible(true)}
-        onReceive={() => setReceiveModalVisible(true)}
-      />
-      <View style={styles.transactionsHeader}>
-        <Text style={styles.transactionsTitle}>Recent Transactions</Text>
-        <TouchableOpacity onPress={() => setActiveTab('history')}>
-          <Text style={styles.seeAllText}>See All</Text>
-        </TouchableOpacity>
-      </View>
-      <TransactionList 
-        transactions={transactions} 
-      />
+      {!isLoading ? (
+        <>
+          <BalanceCard
+            showBalance={showBalance}
+            walletData={walletData}
+            onToggleBalance={() => setShowBalance(!showBalance)}
+            currentDate={formatDate(new Date())}
+          />
+          <QuickActions
+            onSend={() => setSendModalVisible(true)}
+            onReceive={() => setReceiveModalVisible(true)}
+          />
+          <View style={styles.transactionsHeader}>
+            <Text style={styles.transactionsTitle}>Recent Transactions</Text>
+          </View>
+          <TransactionList transactions={transactions} />
+        </>
+      ) : (
+        <View style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100%',
+          width: '100%',
+        }}>
+          <Text style={{
+            fontSize: 16,
+            textAlign: 'center'
+          }}>
+            {isLoading ? 'Please wait, we\'re setting up a wallet for you...' : 'No wallet data available'}
+          </Text>
+        </View>
+      )}
     </View>
   );
 
@@ -389,11 +474,13 @@ export const AppContent: React.FC = () => {
       {activeTab === 'history' && <HistoryScreen />}
       {showProfileSettings && <ProfileSettings onClose={() => setShowProfileSettings(false)} />}
       
-      <BottomNav
-        activeTab={activeTab}
-        onTabPress={setActiveTab}
-        onSendPress={() => setSendModalVisible(true)}
-      />
+      {!isLoading && walletData && (
+        <BottomNav
+          activeTab={activeTab}
+          onTabPress={setActiveTab}
+          onSendPress={() => setSendModalVisible(true)}
+        />
+      )}
       
       <SendModal
         visible={sendModalVisible}
@@ -403,7 +490,7 @@ export const AppContent: React.FC = () => {
       <ReceiveModal
         visible={receiveModalVisible}
         onClose={() => setReceiveModalVisible(false)}
-        walletData={user?.linked_accounts[1]}
+        walletData={walletData}
       />
       <QRScannerScreen
         visible={qrScannerVisible}
@@ -453,8 +540,20 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
-  seeAllText: {
-    color: '#7c3aed',
+  createWalletContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: '100%',
+    width: '100%',
+  },
+  createWalletTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  createWalletDescription: {
     fontSize: 14,
+    textAlign: 'center',
   },
 }); 
