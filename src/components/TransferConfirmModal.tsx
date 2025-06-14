@@ -15,12 +15,7 @@ interface TransferConfirmModalProps {
   visible: boolean;
   onClose: () => void;
   onConfirm: () => void;
-  data: {
-    amount: number;
-    recipient: string;
-    chainId: number;
-    method: string;
-  };
+  data: object,
   isValidating: boolean;
   validationError: string | null;
 }
@@ -114,7 +109,7 @@ export const TransferConfirmModal: React.FC<TransferConfirmModalProps> = ({
                 <View style={styles.detailRow}>
                   <Text style={styles.detailLabel}>To</Text>
                   <Text style={styles.detailValue} numberOfLines={1} ellipsizeMode="middle">
-                    {data.recipient}
+                    {data.address}
                   </Text>
                 </View>
                 <View style={styles.detailRow}>

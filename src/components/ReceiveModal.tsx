@@ -20,11 +20,13 @@ import QRCode from 'react-native-qrcode-svg';
 interface ReceiveModalProps {
   visible: boolean;
   onClose: () => void;
+  walletData: object
 }
 
 export const ReceiveModal: React.FC<ReceiveModalProps> = ({
   visible,
   onClose,
+  walletData,
 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [inputAmount, setInputAmount] = useState('');
@@ -243,7 +245,7 @@ export const ReceiveModal: React.FC<ReceiveModalProps> = ({
                     fontWeight: 500
                   }}>{submittedAmount}$</Text></Text>
                   <QRCode
-                    value={`ethereum:0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913@8453/transfer?address=0x5DFE0A60d3c27976eb3F1530F8a1CfA4bE2BAD30&uint256=${submittedAmount * 1000000}`}
+                    value={`${walletData.chain_type}:${walletData.address}@${walletData.chain_id.split(':')[1]}/transfer?uint256=${submittedAmount * 1000000}&wallet_id=${walletData.id}&wallet_client=${walletData.wallet_client}`}
                     size={200}
                   />
                 </Animated.View>

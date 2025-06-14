@@ -146,6 +146,10 @@ export const AppContent: React.FC = () => {
         method,
         amount: 0,
         recipient: '',
+        walletId: '',
+        walletClient: '',
+        // Convert amount from wei to ETH
+        amountInEth: 0
       };
 
       if (method === 'transfer') {
@@ -155,6 +159,13 @@ export const AppContent: React.FC = () => {
         result.amount = parseInt(searchParams.get('value') || '0');
         result.recipient = addressPart;
       }
+
+      // Parse additional parameters
+      result.walletId = searchParams.get('wallet_id') || '';
+      result.walletClient = searchParams.get('wallet_client') || '';
+      
+      // Convert amount from wei to ETH (1 ETH = 10^18 wei)
+      result.amountInEth = result.amount / 1000000; // Since we multiply by 1000000 in QR code
 
       return result;
     } catch (error) {
@@ -252,6 +263,7 @@ export const AppContent: React.FC = () => {
       <ReceiveModal
         visible={receiveModalVisible}
         onClose={() => setReceiveModalVisible(false)}
+        walletData={user?.linked_accounts[1]}
       />
       <QRScannerScreen
         visible={qrScannerVisible}
