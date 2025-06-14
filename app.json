@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
@@ -17,8 +17,13 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.normiewalletmobile",
+      "usesAppleSignIn": true,
+      "associatedDomains": ["webcredentials:<your-associated-domain>"],
       "infoPlist": {
-        "NSCameraUsageDescription": "We need access to your camera to scan QR codes"
+        "NSCameraUsageDescription": "We need access to your camera to scan QR codes",
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true
+        }
       }
     },
     "android": {
@@ -42,12 +47,34 @@
         {
           "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera to scan QR codes."
         }
-      ]
+      ],
+      "expo-secure-store",
+      "expo-web-browser",
+      "expo-router",
+      "expo-apple-authentication",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "17.5"
+          },
+          "android": {
+            "compileSdkVersion": 35
+          }
+        }
+      ],
+      "expo-font"
     ],
+    "experiments": {
+      "typedRoutes": true
+    },
     "extra": {
       "eas": {
         "projectId": "62603bdb-1831-4d98-bd19-e64a374e437a"
-      }
+      },
+      "privyAppId": "cmbwcub9100k6kv0nn9wbkrxw",
+      "privyClientId": "client-WY6MDVA2BAEqnVGkxBf98H8NpF72SfaqEDMk3ge3p5SAQ",
+      "passkeyAssociatedDomain": "https://<your-associated-domain>"
     }
   }
 }

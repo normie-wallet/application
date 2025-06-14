@@ -5,9 +5,10 @@ import { Ionicons } from '@expo/vector-icons';
 interface HeaderProps {
   currentDate: string;
   onScanPress: () => void;
+  onSettingsPress: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ currentDate, onScanPress }) => {
+export const Header: React.FC<HeaderProps> = ({ currentDate, onScanPress, onSettingsPress }) => {
   return (
     <View style={styles.header}>
       <View style={styles.headerLeft}>
@@ -29,7 +30,7 @@ export const Header: React.FC<HeaderProps> = ({ currentDate, onScanPress }) => {
             <Text style={styles.badgeText}>3</Text>
           </View>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.iconButton}>
+        <TouchableOpacity style={styles.iconButton} onPress={onSettingsPress}>
           <Ionicons name="settings-outline" size={24} color="#666" />
         </TouchableOpacity>
       </View>
