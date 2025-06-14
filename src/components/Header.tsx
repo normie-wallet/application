@@ -4,11 +4,17 @@ import { Ionicons } from '@expo/vector-icons';
 
 interface HeaderProps {
   currentDate: string;
+  user: object,
   onScanPress: () => void;
   onSettingsPress: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ currentDate, onScanPress, onSettingsPress }) => {
+export const Header: React.FC<HeaderProps> = ({ 
+  currentDate, 
+  user,
+  onScanPress, 
+  onSettingsPress 
+}) => {
   return (
     <View style={styles.header}>
       <View style={styles.headerLeft}>
@@ -17,7 +23,7 @@ export const Header: React.FC<HeaderProps> = ({ currentDate, onScanPress, onSett
         </View>
         <View style={styles.headerText}>
           <Text style={styles.dateText}>{currentDate}</Text>
-          <Text style={styles.greetingText}>Hi, Matvii</Text>
+          <Text style={styles.greetingText} numberOfLines={1} ellipsizeMode="tail">{user.address}</Text>
         </View>
       </View>
       <View style={styles.headerRight}>
@@ -70,6 +76,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#1f2937',
+    width: 150,
   },
   headerRight: {
     flexDirection: 'row',

@@ -5,13 +5,26 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 interface BalanceCardProps {
   showBalance: boolean;
+  walletData: {
+    address: string;
+  };
   onToggleBalance: () => void;
 }
 
+const maskWalletAddress = (address: string): string => {
+  if (!address) return '';
+  const start = address.slice(0, 6);
+  const end = address.slice(-4);
+  return `${start}...${end}`;
+};
+
 export const BalanceCard: React.FC<BalanceCardProps> = ({
   showBalance,
+  walletData,
   onToggleBalance,
 }) => {
+  console.log(walletData);
+
   return (
     <LinearGradient
       colors={['#7c3aed', '#db2777']}
@@ -32,7 +45,7 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
       </Text>
       <View style={styles.walletInfo}>
         <Text style={styles.walletLabel}>Wallet ID</Text>
-        <Text style={styles.walletAddress}>0x742d...f44e</Text>
+        <Text style={styles.walletAddress}>{maskWalletAddress(walletData.address)}</Text>
       </View>
     </LinearGradient>
   );

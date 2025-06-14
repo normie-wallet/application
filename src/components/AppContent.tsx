@@ -21,6 +21,7 @@ import { ShakeToAction } from '../utils/shakeToAction';
 import { TransferConfirmModal } from './TransferConfirmModal';
 import { useLogin } from "@privy-io/expo/ui";
 import { ProfileSettings } from '../screens/ProfileSettings';
+import { usePrivy } from '@privy-io/expo';
 
 export const AppContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('home');
@@ -38,11 +39,13 @@ export const AppContent: React.FC = () => {
   } | null>(null);
   const [isValidating, setIsValidating] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const {user} = usePrivy();
   const { login } = useLogin();
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [showProfileSettings, setShowProfileSettings] = useState(false);
   
   const shakeDetector = useRef<ShakeToAction | null>(null);
+  const userData = user?.linked_accounts[0];
 
   const transactions = [
     {
@@ -205,10 +208,12 @@ export const AppContent: React.FC = () => {
         currentDate={currentDate}
         onScanPress={() => setQrScannerVisible(true)}
         onSettingsPress={() => setShowProfileSettings(true)}
+        user={userData}
       />
       <BalanceCard
         showBalance={showBalance}
         onToggleBalance={() => setShowBalance(!showBalance)}
+        walletData={user?.linked_accounts[1]}
       />
       <QuickActions
         onSend={() => setSendModalVisible(true)}
@@ -277,11 +282,11 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#fff',
-    padding: 0
+    paddingTop: 40,
+    paddingBottom: 10
   },
   container: {
     flex: 1,
-    padding: 20,
   },
   transactionsHeader: {
     flexDirection: 'row',
@@ -289,6 +294,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 20,
     marginBottom: 10,
+    paddingLeft: 20,
+    paddingRight: 20
   },
   transactionsTitle: {
     fontSize: 18,

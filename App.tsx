@@ -8,6 +8,17 @@ import Constants from "expo-constants";
 import { PrivyElements } from "@privy-io/expo/ui";
 import { AppContent } from './src/components/AppContent';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { LoginScreen } from './src/screens/LoginScreen';
+
+const AppContentWrapper: React.FC = () => {
+  const { user } = usePrivy();
+
+  if (!user) {
+    return <LoginScreen />;
+  }
+
+  return <AppContent />;
+};
 
 const App: React.FC = () => {
   const privyAppId = Constants.expoConfig?.extra?.privyAppId;
@@ -20,12 +31,12 @@ const App: React.FC = () => {
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={{ flex: 1 }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#7c3aed' }} edges={['right', 'left']}>
         <PrivyProvider 
           appId={privyAppId}
           clientId={privyClientId}
         >
-          <AppContent />
+          <AppContentWrapper />
           <PrivyElements />
         </PrivyProvider>
       </SafeAreaView>
