@@ -21,7 +21,22 @@ import { ShakeToAction } from '../utils/shakeToAction';
 import { TransferConfirmModal } from './TransferConfirmModal';
 import { useLogin } from "@privy-io/expo/ui";
 import { ProfileSettings } from '../screens/ProfileSettings';
-import { usePrivy } from '@privy-io/expo';
+import { usePrivy, useEmbeddedEthereumWallet } from '@privy-io/expo';
+import {
+  createPublicClient,
+  encodeFunctionData,
+  parseAbi,
+  parseUnits,
+  http,
+} from "viem";
+import { sepolia } from "viem/chains";
+import { createKernelAccount, createKernelAccountClient } from "@zerodev/sdk";
+import { sponsorUserOperation } from "@zerodev/sdk";
+import { ethers } from "ethers";
+const { wallets } = useEmbeddedEthereumWallet();
+
+const ENTRYPOINT = "0x0576a174D229E3cFA37253523E645A78A0C91B57";
+
 
 export const AppContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('home');
@@ -46,6 +61,19 @@ export const AppContent: React.FC = () => {
   
   const shakeDetector = useRef<ShakeToAction | null>(null);
   const userData = user?.linked_accounts[0];
+
+  const USDC = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
+  const USDT = "0x7169D38820dfd117C3FA1f22a697dBA58d90BA06";
+
+  const UNISWAP_ROUTER = "0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E";
+  const ERC20_ABI = parseAbi([
+    "function transfer(address,uint256)",
+    "function approve(address,uint256)",
+    "function balanceOf(address) view returns (uint256)"
+  ]);
+  const SWAP_ABI = parseAbi([
+    "function exactInputSingle((address tokenIn,address tokenOut,uint24 fee,address recipient,uint256 amountIn,uint256 amountOutMinimum,uint160 sqrtPriceLimitX96)) returns (uint256)"
+  ]);
 
   const transactions = [
     {
@@ -207,10 +235,122 @@ export const AppContent: React.FC = () => {
 
   const handleTransferConfirm = async () => {
     if (!transferData) return;
-    
-    console.log('Transfer confirmed:', transferData);
-    
-    setTransferConfirmVisible(false);
+
+    setIsLoading(true);
+    setValidationError(null);
+
+    try {
+
+      const privyProvider = await wallets[0].getProvider();
+
+      const owner = user?.linked_accounts.find(account => account.type === 'wallet')?.address;
+      const recipient = transferData.recipient;
+      const amount = transferData.amount.toString();
+
+      const publicClient = createPublicClient({
+        chain: sepolia,
+        transport: http("https://1rpc.io/sepolia"),
+      });
+
+      const account = await createKernelAccount(publicClient, {
+        entryPoint: {
+          address: "0x0576a174D229E3cFA37253523E645A78A0C91B57",
+          version: "0.7",
+        },
+        kernelVersion: "0.3.0",
+        eip7702Account: privyProvider as any, 
+      });
+
+      const aaClient = createKernelAccountClient({
+        account,
+        chain: sepolia,
+        client: publicClient as any,
+        bundlerTransport: http("https://rpc.zerodev.app/api/v3/2ee2e333-dfb9-4617-9763-335c4a7a6b02/chain/11155111"),
+      });
+
+      // 1. Проверка баланса USDC
+      const usdcBal: bigint = await publicClient.readContract({
+        address: USDC,
+        abi: ERC20_ABI,
+        functionName: "balanceOf",
+        args: [account.address],
+      });
+
+      const amt = parseUnits(amount, 6);
+
+      // 2. Если хватает USDC — просто transfer
+      if (usdcBal >= amt) {
+        const tx = await aaClient.sendUserOperation({
+          calls: [
+            {
+              to: USDC,
+              data: encodeFunctionData({
+                abi: ERC20_ABI,
+                functionName: "transfer",
+                args: [recipient as any, amt],
+              }),
+            },
+          ],
+        });
+        setIsLoading(false);
+        setTransferConfirmVisible(false);
+        return;
+      }
+
+      const usdtBal: bigint = await publicClient.readContract({
+        address: USDT,
+        abi: ERC20_ABI,
+        functionName: "balanceOf",
+        args: [account.address],
+      });
+
+      if (usdtBal > 0n) {
+        const approveUSDT = encodeFunctionData({
+          abi: ERC20_ABI,
+          functionName: "approve",
+          args: [UNISWAP_ROUTER, usdtBal],
+        });
+
+        const swap = encodeFunctionData({
+          abi: SWAP_ABI,
+          functionName: "exactInputSingle",
+          args: [{
+            tokenIn: USDT,
+            tokenOut: USDC,
+            fee: 3000,
+            recipient: account.address,
+            amountIn: usdtBal,
+            amountOutMinimum: 0n,
+            sqrtPriceLimitX96: 0n,
+          }],
+        });
+
+        const transfer = encodeFunctionData({
+          abi: ERC20_ABI,
+          functionName: "transfer",
+          args: [recipient as any, amt],
+        });
+
+        await aaClient.sendUserOperation({
+          calls: [
+            { to: USDT, data: approveUSDT },
+            { to: UNISWAP_ROUTER, data: swap },
+            { to: USDC, data: transfer },
+          ],
+        });
+        setIsLoading(false);
+        setTransferConfirmVisible(false);
+        return;
+      }
+
+      // 4. Если нет USDT — ошибка
+      setValidationError("Not enough USDC or USDT for transfer");
+
+    } catch (e) {
+      setValidationError(String(e));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const renderHomeTab = () => (

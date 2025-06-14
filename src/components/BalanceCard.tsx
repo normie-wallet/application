@@ -45,7 +45,7 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
       </Text>
       <View style={styles.walletInfo}>
         <Text style={styles.walletLabel}>Wallet ID</Text>
-        <Text style={styles.walletAddress}>{maskWalletAddress(walletData.address)}</Text>
+        <Text style={styles.walletAddress}>{maskWalletAddress(walletData?.address)}</Text>
       </View>
     </LinearGradient>
   );
