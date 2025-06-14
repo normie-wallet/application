@@ -8,7 +8,14 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
+import * as AuthSession from 'expo-auth-session';
+import * as WebBrowser from 'expo-web-browser';
+import * as SecureStore from 'expo-secure-store';
+import * as Random from 'expo-random';
 import { Header } from './src/components/Header';
 import { BalanceCard } from './src/components/BalanceCard';
 import { QuickActions } from './src/components/QuickActions';
@@ -20,6 +27,9 @@ import { TransactionList } from './src/components/TransactionList';
 import QRScannerScreen from './src/screens/QRScannerScreen';
 import { ShakeToAction } from './src/utils/shakeToAction';
 import { TransferConfirmModal } from './src/components/TransferConfirmModal';
+
+// Initialize WebBrowser
+WebBrowser.maybeCompleteAuthSession();
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('home');
@@ -37,6 +47,12 @@ const App: React.FC = () => {
   } | null>(null);
   const [isValidating, setIsValidating] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [authToken, setAuthToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLogin, setIsLogin] = useState(true);
+  const [userInfo, setUserInfo] = useState<any>(null);
   
   const shakeDetector = useRef<ShakeToAction | null>(null);
 
@@ -119,6 +135,67 @@ const App: React.FC = () => {
     };
     setCurrentDate(date.toLocaleDateString('en-US', options));
   }, []);
+
+  useEffect(() => {
+    // Check for existing auth token on app start
+    checkExistingAuth();
+  }, []);
+
+  const checkExistingAuth = async () => {
+    try {
+      const token = await SecureStore.getItemAsync('auth_token');
+      if (token) {
+        setAuthToken(token);
+      }
+    } catch (error) {
+      console.error('Auth check error:', error);
+    }
+  };
+
+  const handleAuth = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Here you would typically make an API call to your backend
+      // For demo purposes, we'll simulate a successful login
+      if (email && password) {
+        // Simulate API call delay
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Generate a simple token (in real app, this would come from your backend)
+        const token = Math.random().toString(36).substring(2) + Date.now().toString(36);
+        
+        // Store the token
+        await SecureStore.setItemAsync('auth_token', token);
+        setAuthToken(token);
+        
+        Alert.alert('Success', isLogin ? 'Successfully logged in!' : 'Account created successfully!');
+        
+        // Clear form
+        setEmail('');
+        setPassword('');
+      } else {
+        Alert.alert('Error', 'Please fill in all fields');
+      }
+    } catch (error) {
+      console.error('Auth error:', error);
+      Alert.alert('Error', 'Authentication failed');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await SecureStore.deleteItemAsync('auth_token');
+      setAuthToken(null);
+      setUserInfo(null);
+      Alert.alert('Success', 'Successfully logged out');
+    } catch (error) {
+      console.error('Logout error:', error);
+      Alert.alert('Error', 'Failed to logout');
+    }
+  };
 
   const handleSend = (amount: string, recipient: string) => {
     // Handle send logic here
@@ -210,6 +287,57 @@ const App: React.FC = () => {
     setTransferConfirmVisible(false);
   };
 
+  const renderAuthForm = () => (
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.authContainer}
+    >
+      <View style={styles.authForm}>
+        <Text style={styles.authTitle}>
+          {isLogin ? 'Sign In' : 'Create Account'}
+        </Text>
+        
+        <TextInput
+          style={styles.input}
+          placeholder="Email"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoComplete="email"
+        />
+        
+        <TextInput
+          style={styles.input}
+          placeholder="Password"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+          autoCapitalize="none"
+        />
+        
+        <TouchableOpacity 
+          style={styles.authButton}
+          onPress={handleAuth}
+          disabled={isLoading}
+        >
+          <Text style={styles.authButtonText}>
+            {isLoading ? 'Loading...' : (isLogin ? 'Sign In' : 'Create Account')}
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={styles.switchAuthButton}
+          onPress={() => setIsLogin(!isLogin)}
+        >
+          <Text style={styles.switchAuthText}>
+            {isLogin ? 'Need an account? Sign up' : 'Already have an account? Sign in'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </KeyboardAvoidingView>
+  );
+
   const renderHomeTab = () => (
     <View style={styles.container}>
       <Header 
@@ -224,6 +352,30 @@ const App: React.FC = () => {
         onSend={() => setSendModalVisible(true)}
         onReceive={() => setReceiveModalVisible(true)}
       />
+      
+      {!authToken ? (
+        renderAuthForm()
+      ) : (
+        <View style={styles.authContainer}>
+          <View style={styles.userInfoContainer}>
+            <Text style={styles.userInfoText}>
+              Welcome back!
+            </Text>
+            <Text style={styles.userEmailText}>
+              {email}
+            </Text>
+          </View>
+          <TouchableOpacity 
+            style={styles.logoutButton}
+            onPress={logout}
+          >
+            <Text style={styles.logoutButtonText}>
+              Sign Out
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       <View style={styles.transactionsHeader}>
         <Text style={styles.transactionsTitle}>Recent Transactions</Text>
         <TouchableOpacity onPress={() => setActiveTab('history')}>
@@ -306,6 +458,76 @@ const styles = StyleSheet.create({
     color: '#7c3aed',
     fontSize: 14,
     fontWeight: '500',
+  },
+  authContainer: {
+    margin: 16,
+  },
+  authForm: {
+    backgroundColor: '#f3f4f6',
+    padding: 16,
+    borderRadius: 8,
+  },
+  authTitle: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: '#1f2937',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  input: {
+    backgroundColor: 'white',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  authButton: {
+    backgroundColor: '#7c3aed',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  authButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  switchAuthButton: {
+    marginTop: 16,
+    alignItems: 'center',
+  },
+  switchAuthText: {
+    color: '#7c3aed',
+    fontSize: 14,
+  },
+  userInfoContainer: {
+    backgroundColor: '#f3f4f6',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  userInfoText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1f2937',
+    marginBottom: 4,
+  },
+  userEmailText: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  logoutButton: {
+    backgroundColor: '#ef4444',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  logoutButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 
