@@ -32,12 +32,6 @@ export const Header: React.FC<HeaderProps> = ({
         {loadingWallet && <TouchableOpacity style={styles.iconButton} onPress={onScanPress}>
           <Ionicons name="qr-code" size={24} color="#7c3aed" />
         </TouchableOpacity>}
-        <TouchableOpacity style={styles.iconButton}>
-          <Ionicons name="notifications" size={24} color="#666" />
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>3</Text>
-          </View>
-        </TouchableOpacity>
         <TouchableOpacity style={styles.iconButton} onPress={onSettingsPress}>
           <Ionicons name="settings-outline" size={24} color="#666" />
         </TouchableOpacity>
@@ -78,7 +72,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#1f2937',
-    width: 150,
+    width: 200,
   },
   headerRight: {
     flexDirection: 'row',

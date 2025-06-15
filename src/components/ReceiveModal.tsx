@@ -118,9 +118,6 @@ export const ReceiveModal: React.FC<ReceiveModalProps> = ({
     return null;
   }
 
-  console.log( `Wallet Data 333:` );
-  console.log( submittedAmount );
-
   return (
     <Modal
       visible={isVisible}
@@ -243,9 +240,10 @@ export const ReceiveModal: React.FC<ReceiveModalProps> = ({
 
                   <Text style={{
                     ...styles.receiveAmount,
+                    fontSize: 30,
                   }}>Receive <Text style={{
                     color: '#7c3aed',
-                    fontWeight: 500
+                    fontWeight: 500,
                   }}>{submittedAmount}$</Text></Text>
                   <QRCode
                     value={`${walletData.chain_type}:0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238@11155111/transfer?address=${walletData.address}&uint256=${submittedAmount * 1000000}`}
@@ -299,7 +297,8 @@ const styles = StyleSheet.create({
   receiveAmount: {
     fontSize: 40,
     marginBottom: 40,
-    marginTop: 0
+    marginTop: 0,
+    textAlign: 'left'
   },
   qrCode: {
     padding: 16,

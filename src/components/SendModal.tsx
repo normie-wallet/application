@@ -120,7 +120,7 @@ export const SendModal: React.FC<SendModalProps> = ({
               ]}
             >
               <View style={styles.header}>
-                <Text style={styles.title}>Send USDC</Text>
+                <Text style={styles.title}>Send USD</Text>
                 <TouchableOpacity onPress={onClose}>
                   <Ionicons name="close" size={24} color="#666" />
                 </TouchableOpacity>

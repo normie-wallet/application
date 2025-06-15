@@ -2,20 +2,15 @@ const { getDefaultConfig } = require('@expo/metro-config');
 
 const config = getDefaultConfig(__dirname);
 
-// Ensure we're using the correct Metro version
-config.resolver.sourceExts = ['jsx', 'js', 'ts', 'tsx', 'json'];
-config.resolver.assetExts = [
-  'png',
-  'jpg',
-  'jpeg',
-  'gif',
-  'webp',
-  'ttf',
-  'otf',
-  'woff',
-  'woff2',
-  'eot'
-];
+// Add buffer polyfill
+config.resolver.extraNodeModules = {
+  ...config.resolver.extraNodeModules,
+  buffer: require.resolve('buffer'),
+};
+
+// Add polyfills to the resolver
+config.resolver.sourceExts = [...config.resolver.sourceExts, 'js', 'jsx', 'ts', 'tsx'];
+config.resolver.assetExts = [...config.resolver.assetExts, 'cjs'];
 
 const resolveRequestWithPackageExports = (context, moduleName, platform) => {
   // Package exports in `isows` are incorrect, so we need to disable them

@@ -72,13 +72,16 @@ export const TransactionList: React.FC<TransactionListProps> = ({
 
   return (
     <View style={styles.container}>
+      {transactions.length !== 0 ?
       <SectionList
         sections={sections}
         renderItem={renderTransaction}
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
         stickySectionHeadersEnabled={false}
-      />
+      /> : <Text style={{
+        padding: 20
+      }}>There are no transations yet in your account.</Text>}
     </View>
   );
 };

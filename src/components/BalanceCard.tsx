@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -27,43 +27,49 @@ interface BalanceCardProps {
   onToggleBalance: () => void;
 }
 
-const maskWalletAddress = (address: string): string => {
-  if (!address) return '';
-  const start = address.slice(0, 6);
-  const end = address.slice(-4);
-  return `${start}...${end}`;
-};
-
-
-  const getBalance = async (address: string): Promise<string> => {
-    if (!address) return "0.00";
-
-    const clients = {
-      sepolia: createPublicClient({ chain: sepolia, transport: http(SEPOLIA_RPC) }),
-    };
-
-    const [
-      usdcSepolia,
-    ] = await Promise.all([
-      clients.sepolia.readContract({
-        address: USDC_ADDRESSES.sepolia as any,
-        abi: ERC20_ABI,
-        functionName: "balanceOf",
-        args: [address as any],
-      })
-    ]);
-
-    const sum =
-      Number(usdcSepolia) / 1e6
-      
-    return sum.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  };
-
 export const BalanceCard: React.FC<BalanceCardProps> = ({
   showBalance,
   walletData,
   onToggleBalance,
 }) => {
+  const [cardBalance, setCardBalance] = useState<any>(null);
+  const maskWalletAddress = (address: string): string => {
+    if (!address) return '';
+    const start = address.slice(0, 6);
+    const end = address.slice(-4);
+    return `${start}...${end}`;
+  };
+  
+  
+    const getBalance = async (address: string): Promise<string> => {
+      if (!address) return "0.00";
+
+      const clients = {
+        sepolia: createPublicClient({ chain: sepolia, transport: http(SEPOLIA_RPC) }),
+      };
+  
+      const [
+        usdcSepolia,
+      ] = await Promise.all([
+        clients.sepolia.readContract({
+          address: USDC_ADDRESSES.sepolia as any,
+          abi: ERC20_ABI,
+          functionName: "balanceOf",
+          args: [address as any],
+        })
+      ]);
+  
+      const sum =
+        Number(usdcSepolia) / 1e6
+        
+      return sum.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    };
+
+  useEffect(() => {
+    console.log(getBalance(walletData?.address));
+    setCardBalance( getBalance(walletData?.address) );
+  }, [])
+
   return (
     <LinearGradient
       colors={['#7c3aed', '#db2777']}
@@ -80,7 +86,7 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
       </View>
       <Text style={styles.balanceLabel}>Available Balance</Text>
       <Text style={styles.balanceAmount}>
-        {showBalance ? getBalance(walletData?.address) : '••••••••'}
+        {showBalance && '$'} {showBalance ? cardBalance : '********'}
       </Text>
       <View style={styles.walletInfo}>
         <Text style={styles.walletLabel}>Wallet ID</Text>

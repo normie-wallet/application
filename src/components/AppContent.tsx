@@ -33,6 +33,7 @@ import {
 import { sepolia } from "viem/chains";
 import { createKernelAccount, createKernelAccountClient } from "@zerodev/sdk";
 import { ethers } from "ethers";
+import { fetchUsdcTransactions } from 'utils/transactions';
 
 
 
@@ -59,8 +60,6 @@ export const AppContent: React.FC = () => {
   const [showProfileSettings, setShowProfileSettings] = useState(false);
   const { create, wallets } = useEmbeddedEthereumWallet();
 
-  console.log('Account Data:', accountData);
-  
   const shakeDetector = useRef<ShakeToAction | null>(null);
   const [userData, setUserData] = useState<any>(accountData?.linked_accounts?.[0]);
   const [walletData, setWalletData] = useState<object | undefined>(user?.linked_accounts[1]);
@@ -68,7 +67,6 @@ export const AppContent: React.FC = () => {
   // Update userData and walletData when accountData changes
   useEffect(() => {
     if (accountData) {
-      console.log('Updating states with new account data:', accountData);
       setUserData(accountData.linked_accounts?.[0]);
       setWalletData(accountData.linked_accounts?.[1]);
       setIsLoading(false);
@@ -90,10 +88,7 @@ export const AppContent: React.FC = () => {
         setAccountData(userData);
         setUserData(userData.linked_accounts?.[0]);
         setWalletData(userData.linked_accounts?.[1]);
-        console.log('Wallet data after creation:', userData.linked_accounts?.[1]);
       } catch (error) {
-        // If wallet already exists, use existing user data
-        console.log('Using existing user data:', user);
         setAccountData(user);
         setUserData(user?.linked_accounts?.[0]);
         setWalletData(user?.linked_accounts?.[1]);
@@ -104,20 +99,12 @@ export const AppContent: React.FC = () => {
     };
 
     if (!accountData?.linked_accounts?.[1]) {
-      console.log('No wallet found, creating new one...');
       createWallet();
     } else {
-      console.log('Using existing wallet data:', accountData.linked_accounts[1]);
       setWalletData(accountData.linked_accounts[1]);
       setIsLoading(false);
     }
   }, []);
-
-  // Log wallet data changes
-  useEffect(() => {
-    console.log('Wallet data updated:', walletData);
-  }, [walletData]);
-
 
   const USDC = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
   const USDT = "0x7169D38820dfd117C3FA1f22a697dBA58d90BA06";
@@ -149,94 +136,7 @@ export const AppContent: React.FC = () => {
 
   const ETHERSCAN_API_KEY = "N5FS2S9UUJ68SX2IGUKKNBF8W8W56A8B9H";
 
-  async function fetchUsdcTransactions(address: string) {
-    if (!address) return [];
-
-    const url = `https://api-sepolia.etherscan.io/api?module=account&action=tokentx&contractaddress=${USDC}&address=${address}&page=1&offset=10&sort=desc&apikey=${ETHERSCAN_API_KEY}`;
-    const resp = await fetch(url);
-    const data = await resp.json();
-    if (data.status !== "1" || !data.result) return [];
-
-    return data.result.map((tx: any, i: number) => {
-      // direction
-      const outgoing = tx.from.toLowerCase() === address.toLowerCase();
-      // value to float (6 decimals)
-      const value = Number(tx.value) / 1e6;
-      // time
-      const date = new Date(Number(tx.timeStamp) * 1000);
-      // example: 'Today, 10:23 AM' or 'Yesterday, 4:01 PM' or 'Jun 8, 2025'
-      const now = new Date();
-      let dateStr;
-      const diffDays = (now.setHours(0,0,0,0) - date.setHours(0,0,0,0)) / 86400000;
-      if (diffDays === 0) {
-        dateStr = `Today, ${date.toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit' })}`;
-      } else if (diffDays === 1) {
-        dateStr = `Yesterday, ${date.toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit' })}`;
-      } else {
-        dateStr = date.toLocaleDateString("en-US", { month: 'short', day: 'numeric', year: 'numeric' });
-      }
-
-      return {
-        id: i + 1,
-        type: outgoing ? 'send' : 'receive',
-        amount: `${outgoing ? '-' : '+'}$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-        description: outgoing ? `To ${tx.to.slice(0, 6)}...${tx.to.slice(-4)}` : `From ${tx.from.slice(0, 6)}...${tx.from.slice(-4)}`,
-        date: dateStr,
-        icon: outgoing ? 'arrow-up' : 'arrow-down',
-        recipient: outgoing ? tx.to : undefined,
-        sender: !outgoing ? tx.from : undefined,
-        hash: tx.hash,
-      };
-    });
-  }
-
-  const transactions = [
-    {
-      id: 1,
-      type: 'send' as const,
-      amount: '-$50.00',
-      description: 'Transfer to Elena I.',
-      date: 'Today, 10:23 AM',
-      icon: 'arrow-up' as const,
-      recipient: 'Elena Ivanova',
-    },
-    {
-      id: 2,
-      type: 'receive' as const,
-      amount: '+$1,250.00',
-      description: 'Salary from TechCorp',
-      date: 'Today, 9:15 AM',
-      icon: 'arrow-down' as const,
-      sender: 'TechCorp Inc.',
-    },
-    {
-      id: 3,
-      type: 'exchange' as const,
-      amount: '-$200.00',
-      description: 'Exchange to ETH',
-      date: 'Yesterday, 5:45 PM',
-      icon: 'swap-horizontal' as const,
-      details: '0.08 ETH',
-    },
-    {
-      id: 4,
-      type: 'send' as const,
-      amount: '-$35.75',
-      description: 'Coffee Shop Payment',
-      date: 'Yesterday, 11:30 AM',
-      icon: 'cafe' as const,
-      recipient: 'Urban Brew',
-    },
-    {
-      id: 5,
-      type: 'receive' as const,
-      amount: '+$420.00',
-      description: 'Freelance Project',
-      date: 'Jun 9, 2025',
-      icon: 'laptop' as const,
-      sender: 'DesignStudio',
-    },
-  ];
+  const [transactions, setTransactions] = useState<any>([]);
 
   useEffect(() => {
     shakeDetector.current = new ShakeToAction(() => {
@@ -257,8 +157,6 @@ export const AppContent: React.FC = () => {
     };
   }, []);
 
-
-
   useEffect(() => {
     const date = new Date();
     const options: Intl.DateTimeFormatOptions = {
@@ -268,8 +166,18 @@ export const AppContent: React.FC = () => {
     };
     setCurrentDate(date.toLocaleDateString('en-US', options));
   }, []);
+
+  useEffect(() => {
+    const fetchTransactions = async () => {
+        const transS = await fetchUsdcTransactions(walletData?.address);
+
+        setTransactions( transS );
+    }
+
+    fetchTransactions();
+  }, [])
   
-  const handleSend = (amount: string, recipient: string) => {
+  const handleSend = (amount: any, recipient: string) => {
     handleTransferConfirm(recipient, amount, 11155111);
     setSendModalVisible(false);
   };
@@ -351,14 +259,22 @@ export const AppContent: React.FC = () => {
     return hasEnoughBalance;
   };
 
-const handleTransferConfirm = async (recipient: string, amount: string) => {
+const handleTransferConfirm = async (recipient: string, amount: any) => {
   setIsLoading(true);
   setValidationError(null);
+
+  console.log(`Recipient: ${recipient}`);
+  console.log(`Amount: ${amount}`);
 
   try {
     const privyProvider = await wallets[0].getProvider();
     const provider = new ethers.BrowserProvider(privyProvider as any);
     const signer = await provider.getSigner();
+    const network = await provider.getNetwork();
+    
+    console.log(network);
+
+    amount = amount.toString();
 
     const usdc = new ethers.Contract(
       USDC,
@@ -456,7 +372,7 @@ const handleTransferConfirm = async (recipient: string, amount: string) => {
       <SendModal
         visible={sendModalVisible}
         onClose={() => setSendModalVisible(false)}
-        onSend={handleSend}
+        onSend={() => handleSend(transferData?.amount, transferData?.recipient)}
       />
       <ReceiveModal
         visible={receiveModalVisible}
@@ -474,7 +390,7 @@ const handleTransferConfirm = async (recipient: string, amount: string) => {
           setTransferConfirmVisible(false);
           setValidationError(null);
         }}
-        onConfirm={handleTransferConfirm}
+        onConfirm={() => handleTransferConfirm(transferData?.recipient, transferData?.amount)}
         data={transferData || {
           amount: 0,
           recipient: '',
