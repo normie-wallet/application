@@ -40,50 +40,22 @@ const maskWalletAddress = (address: string): string => {
 
     const clients = {
       sepolia: createPublicClient({ chain: sepolia, transport: http(SEPOLIA_RPC) }),
-      base: createPublicClient({ chain: baseSepolia, transport: http(BASE_RPC) }),
-      arb: createPublicClient({ chain: arbitrumSepolia, transport: http(ARB_RPC) }),
     };
 
     const [
       usdcSepolia,
-      usdcBase,
-      usdcArb,
-      usdtSepolia,
     ] = await Promise.all([
       clients.sepolia.readContract({
         address: USDC_ADDRESSES.sepolia as any,
         abi: ERC20_ABI,
         functionName: "balanceOf",
         args: [address as any],
-      }),
-      clients.base.readContract({
-        address: USDC_ADDRESSES.base as any,
-        abi: ERC20_ABI,
-        functionName: "balanceOf",
-        args: [address as any],
-      }),
-      clients.arb.readContract({
-        address: USDC_ADDRESSES.arb as any,
-        abi: ERC20_ABI,
-        functionName: "balanceOf",
-        args: [address as any],
-      }),
-      clients.sepolia.readContract({
-        address: USDT_SEPOLIA as any,
-        abi: ERC20_ABI,
-        functionName: "balanceOf",
-        args: [address as any],
-      }),
+      })
     ]);
 
-    // Баланс каждого токена делим на 1e6 и складываем
     const sum =
-      Number(usdcSepolia) / 1e6 +
-      Number(usdcBase) / 1e6 +
-      Number(usdcArb) / 1e6 +
-      Number(usdtSepolia) / 1e6;
-
-    // Округляем до 2 знаков
+      Number(usdcSepolia) / 1e6
+      
     return sum.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
