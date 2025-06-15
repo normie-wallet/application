@@ -21,7 +21,7 @@ import { ShakeToAction } from '../utils/shakeToAction';
 import { TransferConfirmModal } from './TransferConfirmModal';
 import { useLogin } from "@privy-io/expo/ui";
 import { ProfileSettings } from '../screens/ProfileSettings';
-import { PrivyUser, useEmbeddedEthereumWallet, usePrivy } from '@privy-io/expo';
+import { arbitrumSepolia, baseSepolia, PrivyUser, useEmbeddedEthereumWallet, usePrivy } from '@privy-io/expo';
 import {
   createPublicClient,
   encodeFunctionData,
@@ -117,12 +117,11 @@ export const AppContent: React.FC = () => {
     console.log('Wallet data updated:', walletData);
   }, [walletData]);
 
+
   const USDC = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
   const USDT = "0x7169D38820dfd117C3FA1f22a697dBA58d90BA06";
   const UNISWAP_ROUTER = "0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E";
 
-  const USDC_SEPOLIA = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
-  const LINK_SEPOLIA = "0x326C977E6efc84E512bB9C30f76E30c160eD06FB";
 
   const ERC20_ABI = parseAbi([
     "function approve(address,uint256)",
@@ -137,21 +136,58 @@ export const AppContent: React.FC = () => {
     "function ccipSend(uint64,(address receiver,bytes data,(address token,uint256 amount)[] tokenAmounts,address feeToken,bytes extraArgs))"
   ]);
 
-const LINK = "0x326C977E6efc84E512bB9C30f76E30c160eD06FB";
-const ROUTER = "0x80226fc0Ee2b096224EeAc085Bb9a8cba1146f7D";
-const ENTRYPOINT = "0x0576a174D229E3cFA37253523E645A78A0C91B57";
-
-const SEPOLIA_SELECTOR = BigInt("16015286601757825753");
-const BASE_SELECTOR = BigInt("10344971235874465080");
-const ARB_SELECTOR = BigInt("3478487238524512106");
-
-
+    const LINK = "0x326C977E6efc84E512bB9C30f76E30c160eD06FB";
+    const ROUTER = "0x80226fc0Ee2b096224EeAc085Bb9a8cba1146f7D";
+    const ENTRYPOINT = "0x0576a174D229E3cFA37253523E645A78A0C91B57";
 
   const CHAIN_SELECTOR = {
-    sepolia: 11155111n,
-    base: 84532n,
-    arbitrum: 421614n,
+    sepolia: BigInt("16015286601757825753"),
+    base: BigInt("10344971235874465080"),
+    arbitrum: BigInt("3478487238524512106")
   };
+
+  const ETHERSCAN_API_KEY = "N5FS2S9UUJ68SX2IGUKKNBF8W8W56A8B9H";
+
+  async function fetchUsdcTransactions(address: string) {
+    if (!address) return [];
+
+    const url = `https://api-sepolia.etherscan.io/api?module=account&action=tokentx&contractaddress=${USDC}&address=${address}&page=1&offset=10&sort=desc&apikey=${ETHERSCAN_API_KEY}`;
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if (data.status !== "1" || !data.result) return [];
+
+    return data.result.map((tx: any, i: number) => {
+      // direction
+      const outgoing = tx.from.toLowerCase() === address.toLowerCase();
+      // value to float (6 decimals)
+      const value = Number(tx.value) / 1e6;
+      // time
+      const date = new Date(Number(tx.timeStamp) * 1000);
+      // example: 'Today, 10:23 AM' or 'Yesterday, 4:01 PM' or 'Jun 8, 2025'
+      const now = new Date();
+      let dateStr;
+      const diffDays = (now.setHours(0,0,0,0) - date.setHours(0,0,0,0)) / 86400000;
+      if (diffDays === 0) {
+        dateStr = `Today, ${date.toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit' })}`;
+      } else if (diffDays === 1) {
+        dateStr = `Yesterday, ${date.toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit' })}`;
+      } else {
+        dateStr = date.toLocaleDateString("en-US", { month: 'short', day: 'numeric', year: 'numeric' });
+      }
+
+      return {
+        id: i + 1,
+        type: outgoing ? 'send' : 'receive',
+        amount: `${outgoing ? '-' : '+'}$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        description: outgoing ? `To ${tx.to.slice(0, 6)}...${tx.to.slice(-4)}` : `From ${tx.from.slice(0, 6)}...${tx.from.slice(-4)}`,
+        date: dateStr,
+        icon: outgoing ? 'arrow-up' : 'arrow-down',
+        recipient: outgoing ? tx.to : undefined,
+        sender: !outgoing ? tx.from : undefined,
+        hash: tx.hash,
+      };
+    });
+  }
 
   const transactions = [
     {
@@ -219,6 +255,8 @@ const ARB_SELECTOR = BigInt("3478487238524512106");
       }
     };
   }, []);
+
+
 
   useEffect(() => {
     const date = new Date();
@@ -312,61 +350,115 @@ const ARB_SELECTOR = BigInt("3478487238524512106");
     return hasEnoughBalance;
   };
 
-const handleTransferConfirm = async (recipient: string, amount: string, chainId: number) => {
+  const handleTransferConfirm = async (recipient: string, amount: string, chainId: number) => {
 
-  setIsLoading(true);
-  setValidationError(null);
+    setIsLoading(true);
+    setValidationError(null);
 
-  try {
-    const privyProvider = await wallets[0].getProvider();
-    const targetChain = chainId;
-    const chainName = targetChain === 11155111 ? "sepolia" : targetChain === 84532 ? "base" : "arbitrum";
+    try {
+      const privyProvider = await wallets[0].getProvider();
+      const targetChain = chainId;
+      const chainName = targetChain === 11155111 ? "sepolia" : targetChain === 84532 ? "base" : "arbitrum";
 
-    const publicClient = createPublicClient({
-      chain: sepolia,
-      transport: http("https://1rpc.io/sepolia"),
-    });
+      const publicClient = createPublicClient({
+        chain: sepolia,
+        transport: http("https://1rpc.io/sepolia"),
+      });
 
-    const account = await createKernelAccount(publicClient, {
-      entryPoint: { address: ENTRYPOINT, version: "0.7" },
-      kernelVersion: "0.3.0",
-      eip7702Account: privyProvider as any,
-    });
+      const account = await createKernelAccount(publicClient, {
+        entryPoint: { address: ENTRYPOINT, version: "0.7" },
+        kernelVersion: "0.3.0",
+        eip7702Account: privyProvider as any,
+      });
 
-    const aaClient = createKernelAccountClient({
-      account,
-      chain: sepolia,
-      client: publicClient as any,
-      bundlerTransport: http("https://rpc.zerodev.app/api/v3/2ee2e333-dfb9-4617-9763-335c4a7a6b02/chain/11155111"),
-    });
+      const aaClient = createKernelAccountClient({
+        account,
+        chain: sepolia,
+        client: publicClient as any,
+        bundlerTransport: http("https://rpc.zerodev.app/api/v3/2ee2e333-dfb9-4617-9763-335c4a7a6b02/chain/11155111"),
+      });
 
-    const usdcBal: bigint = await publicClient.readContract({
-      address: USDC,
-      abi: ERC20_ABI,
-      functionName: "balanceOf",
-      args: [account.address],
-    });
-    const amt = parseUnits(amount, 6);
+      const usdcBal: bigint = await publicClient.readContract({
+        address: USDC,
+        abi: ERC20_ABI,
+        functionName: "balanceOf",
+        args: [account.address],
+      });
+      const amt = parseUnits(amount, 6);
 
-    if (targetChain === 11155111) {
-      if (usdcBal >= amt) {
-        await aaClient.sendUserOperation({
-          calls: [
-            {
-              to: USDC,
-              data: encodeFunctionData({
-                abi: ERC20_ABI,
-                functionName: "transfer",
-                args: [recipient as any, amt],
-              }),
-            },
-          ],
+      if (targetChain === 11155111) {
+        if (usdcBal >= amt) {
+          await aaClient.sendUserOperation({
+            calls: [
+              {
+                to: USDC,
+                data: encodeFunctionData({
+                  abi: ERC20_ABI,
+                  functionName: "transfer",
+                  args: [recipient as any, amt],
+                }),
+              },
+            ],
+          });
+          setIsLoading(false);
+          setTransferConfirmVisible(false);
+          return;
+        }
+
+        const usdtBal: bigint = await publicClient.readContract({
+          address: USDT,
+          abi: ERC20_ABI,
+          functionName: "balanceOf",
+          args: [account.address],
         });
+
+        if (usdtBal > 0n) {
+          const approveUSDT = encodeFunctionData({
+            abi: ERC20_ABI,
+            functionName: "approve",
+            args: [UNISWAP_ROUTER, usdtBal],
+          });
+
+          const swap = encodeFunctionData({
+            abi: SWAP_ABI,
+            functionName: "exactInputSingle",
+            args: [{
+              tokenIn: USDT,
+              tokenOut: USDC,
+              fee: 3000,
+              recipient: account.address,
+              amountIn: usdtBal,
+              amountOutMinimum: 0n,
+              sqrtPriceLimitX96: 0n,
+            }],
+          });
+
+          const transfer = encodeFunctionData({
+            abi: ERC20_ABI,
+            functionName: "transfer",
+            args: [recipient as any, amt],
+          });
+
+          await aaClient.sendUserOperation({
+            calls: [
+              { to: USDT, data: approveUSDT },
+              { to: UNISWAP_ROUTER, data: swap },
+              { to: USDC, data: transfer },
+            ],
+          });
+          setIsLoading(false);
+          setTransferConfirmVisible(false);
+          return;
+        }
+
+        setValidationError("Not enough tokens for transfer");
         setIsLoading(false);
-        setTransferConfirmVisible(false);
         return;
       }
 
+      // cross-chain
+      let calls: any[] = [];
+      let totalUsdc = usdcBal;
       const usdtBal: bigint = await publicClient.readContract({
         address: USDT,
         abi: ERC20_ABI,
@@ -374,142 +466,88 @@ const handleTransferConfirm = async (recipient: string, amount: string, chainId:
         args: [account.address],
       });
 
-      if (usdtBal > 0n) {
-        const approveUSDT = encodeFunctionData({
-          abi: ERC20_ABI,
-          functionName: "approve",
-          args: [UNISWAP_ROUTER, usdtBal],
+      if (usdtBal > 0n && usdcBal < amt) {
+        calls.push({
+          to: USDT,
+          data: encodeFunctionData({
+            abi: ERC20_ABI,
+            functionName: "approve",
+            args: [UNISWAP_ROUTER, usdtBal],
+          }),
         });
-
-        const swap = encodeFunctionData({
-          abi: SWAP_ABI,
-          functionName: "exactInputSingle",
-          args: [{
-            tokenIn: USDT,
-            tokenOut: USDC,
-            fee: 3000,
-            recipient: account.address,
-            amountIn: usdtBal,
-            amountOutMinimum: 0n,
-            sqrtPriceLimitX96: 0n,
-          }],
+        calls.push({
+          to: UNISWAP_ROUTER,
+          data: encodeFunctionData({
+            abi: SWAP_ABI,
+            functionName: "exactInputSingle",
+            args: [{
+              tokenIn: USDT,
+              tokenOut: USDC,
+              fee: 3000,
+              recipient: account.address,
+              amountIn: usdtBal,
+              amountOutMinimum: 0n,
+              sqrtPriceLimitX96: 0n,
+            }],
+          }),
         });
-
-        const transfer = encodeFunctionData({
-          abi: ERC20_ABI,
-          functionName: "transfer",
-          args: [recipient as any, amt],
-        });
-
-        await aaClient.sendUserOperation({
-          calls: [
-            { to: USDT, data: approveUSDT },
-            { to: UNISWAP_ROUTER, data: swap },
-            { to: USDC, data: transfer },
-          ],
-        });
-        setIsLoading(false);
-        setTransferConfirmVisible(false);
-        return;
       }
 
-      setValidationError("Not enough tokens for transfer");
-      setIsLoading(false);
-      return;
-    }
-
-    // cross-chain
-    let calls: any[] = [];
-    let totalUsdc = usdcBal;
-    const usdtBal: bigint = await publicClient.readContract({
-      address: USDT,
-      abi: ERC20_ABI,
-      functionName: "balanceOf",
-      args: [account.address],
-    });
-
-    if (usdtBal > 0n && usdcBal < amt) {
       calls.push({
-        to: USDT,
+        to: USDC,
         data: encodeFunctionData({
           abi: ERC20_ABI,
           functionName: "approve",
-          args: [UNISWAP_ROUTER, usdtBal],
+          args: [ROUTER, amt],
         }),
       });
+
+      // получить fee
+      const receiverBytes = encodeAbiParameters([{ type: "address" }], [recipient as any]);
+      const message = {
+        receiver: receiverBytes,
+        data: "0x",
+        tokenAmounts: [{ token: USDC, amount: amt }],
+        feeToken: LINK,
+        extraArgs: "0x",
+      } as const;
+
+      const fee: bigint = await publicClient.readContract({
+        address: ROUTER,
+        abi: CCIP_ROUTER_ABI,
+        functionName: "getFee",
+        args: [CHAIN_SELECTOR[chainName], message],
+      });
+
       calls.push({
-        to: UNISWAP_ROUTER,
+        to: LINK,
         data: encodeFunctionData({
-          abi: SWAP_ABI,
-          functionName: "exactInputSingle",
-          args: [{
-            tokenIn: USDT,
-            tokenOut: USDC,
-            fee: 3000,
-            recipient: account.address,
-            amountIn: usdtBal,
-            amountOutMinimum: 0n,
-            sqrtPriceLimitX96: 0n,
-          }],
+          abi: ERC20_ABI,
+          functionName: "approve",
+          args: [ROUTER, fee],
         }),
       });
+
+      const ccipData = encodeFunctionData({
+        abi: CCIP_ROUTER_ABI,
+        functionName: "ccipSend",
+        args: [CHAIN_SELECTOR[chainName], message],
+      });
+
+      calls.push({
+        to: ROUTER,
+        data: ccipData,
+      });
+
+      await aaClient.sendUserOperation({ calls });
+      setIsLoading(false);
+      setTransferConfirmVisible(false);
+
+    } catch (e) {
+      setValidationError(String(e));
+      setIsLoading(false);
     }
-
-    calls.push({
-      to: USDC,
-      data: encodeFunctionData({
-        abi: ERC20_ABI,
-        functionName: "approve",
-        args: [ROUTER, amt],
-      }),
-    });
-
-    // получить fee
-    const receiverBytes = encodeAbiParameters([{ type: "address" }], [recipient as any]);
-    const message = {
-      receiver: receiverBytes,
-      data: "0x",
-      tokenAmounts: [{ token: USDC, amount: amt }],
-      feeToken: LINK,
-      extraArgs: "0x",
-    } as const;
-
-    const fee: bigint = await publicClient.readContract({
-      address: ROUTER,
-      abi: CCIP_ROUTER_ABI,
-      functionName: "getFee",
-      args: [CHAIN_SELECTOR[chainName], message],
-    });
-
-    calls.push({
-      to: LINK,
-      data: encodeFunctionData({
-        abi: ERC20_ABI,
-        functionName: "approve",
-        args: [ROUTER, fee],
-      }),
-    });
-
-    const ccipData = encodeFunctionData({
-      abi: CCIP_ROUTER_ABI,
-      functionName: "ccipSend",
-      args: [CHAIN_SELECTOR[chainName], message],
-    });
-
-    calls.push({
-      to: ROUTER,
-      data: ccipData,
-    });
-
-    await aaClient.sendUserOperation({ calls });
-    setIsLoading(false);
-    setTransferConfirmVisible(false);
-
-  } catch (e) {
-    setValidationError(String(e));
-    setIsLoading(false);
-  }
-};
+  };
 
   const formatDate = (date: Date) => {
     const months = [
@@ -566,6 +604,7 @@ const handleTransferConfirm = async (recipient: string, amount: string, chainId:
       )}
     </View>
   );
+
 
   return (
     <View style={styles.safeArea}>
