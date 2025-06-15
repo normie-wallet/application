@@ -22,7 +22,6 @@ import { TransferConfirmModal } from './TransferConfirmModal';
 import { useLogin } from "@privy-io/expo/ui";
 import { ProfileSettings } from '../screens/ProfileSettings';
 import { PrivyUser, useEmbeddedEthereumWallet, usePrivy } from '@privy-io/expo';
-import { usePrivy, useEmbeddedEthereumWallet } from '@privy-io/expo';
 import {
   createPublicClient,
   encodeFunctionData,
@@ -32,11 +31,8 @@ import {
 } from "viem";
 import { sepolia } from "viem/chains";
 import { createKernelAccount, createKernelAccountClient } from "@zerodev/sdk";
-import { sponsorUserOperation } from "@zerodev/sdk";
-import { ethers } from "ethers";
-const { wallets } = useEmbeddedEthereumWallet();
 
-const ENTRYPOINT = "0x0576a174D229E3cFA37253523E645A78A0C91B57";
+
 
 
 export const AppContent: React.FC = () => {
@@ -53,13 +49,13 @@ export const AppContent: React.FC = () => {
     chainId: number;
     method: string;
   } | null>(null);
-  const [isValidating, setIsValidating] = useState(false);
+  const [isValidating, setIsValidating] = useState(true);
   const [validationError, setValidationError] = useState<string | null>(null);
   const {user} = usePrivy();
   const [accountData, setAccountData] = useState<any>(user);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [showProfileSettings, setShowProfileSettings] = useState(false);
-  const { create } = useEmbeddedEthereumWallet();
+  const { create, wallets } = useEmbeddedEthereumWallet();
 
   console.log('Account Data:', accountData);
   
@@ -122,16 +118,39 @@ export const AppContent: React.FC = () => {
 
   const USDC = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
   const USDT = "0x7169D38820dfd117C3FA1f22a697dBA58d90BA06";
-
   const UNISWAP_ROUTER = "0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E";
+
+  const USDC_SEPOLIA = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
+  const LINK_SEPOLIA = "0x326C977E6efc84E512bB9C30f76E30c160eD06FB";
+
   const ERC20_ABI = parseAbi([
-    "function transfer(address,uint256)",
     "function approve(address,uint256)",
+    "function transfer(address,uint256)",
     "function balanceOf(address) view returns (uint256)"
   ]);
   const SWAP_ABI = parseAbi([
     "function exactInputSingle((address tokenIn,address tokenOut,uint24 fee,address recipient,uint256 amountIn,uint256 amountOutMinimum,uint160 sqrtPriceLimitX96)) returns (uint256)"
   ]);
+  const CCIP_ROUTER_ABI = parseAbi([
+    "function getFee(uint64,(address receiver,bytes data,(address token,uint256 amount)[] tokenAmounts,address feeToken,bytes extraArgs)) view returns (uint256)",
+    "function ccipSend(uint64,(address receiver,bytes data,(address token,uint256 amount)[] tokenAmounts,address feeToken,bytes extraArgs))"
+  ]);
+
+const LINK = "0x326C977E6efc84E512bB9C30f76E30c160eD06FB";
+const ROUTER = "0x80226fc0Ee2b096224EeAc085Bb9a8cba1146f7D";
+const ENTRYPOINT = "0x0576a174D229E3cFA37253523E645A78A0C91B57";
+
+const SEPOLIA_SELECTOR = BigInt("16015286601757825753");
+const BASE_SELECTOR = BigInt("10344971235874465080");
+const ARB_SELECTOR = BigInt("3478487238524512106");
+
+
+
+  const CHAIN_SELECTOR = {
+    sepolia: 11155111n,
+    base: 84532n,
+    arbitrum: 421614n,
+  };
 
   const transactions = [
     {
@@ -211,6 +230,7 @@ export const AppContent: React.FC = () => {
   }, []);
   
   const handleSend = (amount: string, recipient: string) => {
+    handleTransferConfirm(recipient, amount);
     setSendModalVisible(false);
   };
 
@@ -291,8 +311,8 @@ export const AppContent: React.FC = () => {
     return hasEnoughBalance;
   };
 
-  const handleTransferConfirm = async () => {
-    if (!transferData) return;
+  const handleTransferConfirm = async (recipient: string, amount: string) => {
+    console.log('handleTransferConfirm'); 
 
     setIsLoading(true);
     setValidationError(null);
@@ -300,10 +320,6 @@ export const AppContent: React.FC = () => {
     try {
 
       const privyProvider = await wallets[0].getProvider();
-
-      const owner = user?.linked_accounts.find(account => account.type === 'wallet')?.address;
-      const recipient = transferData.recipient;
-      const amount = transferData.amount.toString();
 
       const publicClient = createPublicClient({
         chain: sepolia,
@@ -326,17 +342,16 @@ export const AppContent: React.FC = () => {
         bundlerTransport: http("https://rpc.zerodev.app/api/v3/2ee2e333-dfb9-4617-9763-335c4a7a6b02/chain/11155111"),
       });
 
-      // 1. Проверка баланса USDC
       const usdcBal: bigint = await publicClient.readContract({
         address: USDC,
         abi: ERC20_ABI,
         functionName: "balanceOf",
         args: [account.address],
       });
+      console.log('usdcBal', usdcBal);
 
       const amt = parseUnits(amount, 6);
 
-      // 2. Если хватает USDC — просто transfer
       if (usdcBal >= amt) {
         const tx = await aaClient.sendUserOperation({
           calls: [
@@ -401,8 +416,7 @@ export const AppContent: React.FC = () => {
         return;
       }
 
-      // 4. Если нет USDT — ошибка
-      setValidationError("Not enough USDC or USDT for transfer");
+      setValidationError("Not enough tokens for transfer");
 
     } catch (e) {
       setValidationError(String(e));
@@ -507,7 +521,7 @@ export const AppContent: React.FC = () => {
         data={transferData || {
           amount: 0,
           recipient: '',
-          chainId: 0,
+          chainId: 11155111,
           method: ''
         }}
         isValidating={isValidating}
