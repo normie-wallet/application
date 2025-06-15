@@ -123,7 +123,7 @@ export const TransferConfirmModal: React.FC<TransferConfirmModalProps> = ({
 
             <View style={styles.footer}>
               {validationError && (
-                <Text style={styles.errorText}>{validationError}</Text>
+                <Text style={styles.errorText} numberOfLines={1}>{validationError}</Text>
               )}
               <TouchableOpacity
                 style={[
